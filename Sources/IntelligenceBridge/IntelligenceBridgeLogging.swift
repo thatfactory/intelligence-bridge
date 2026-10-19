@@ -7,6 +7,7 @@ enum IntelligenceBridgeLogging {
     enum Event: Equatable {
         case cancelled
         case completed
+        case cleanupStalled
         case dismissed
         case invalidated
         case launchFailed(ImagePlaygroundBridgeLaunchFailure)
@@ -17,6 +18,8 @@ enum IntelligenceBridgeLogging {
             switch self {
             case .cancelled:
                 "\(emoji) playground | result=cancelled"
+            case .cleanupStalled:
+                "\(emoji) playground | result=cleanup-stalled"
             case .completed:
                 "\(emoji) playground | result=completed"
             case .dismissed:
@@ -35,9 +38,10 @@ enum IntelligenceBridgeLogging {
 
     static func emit(_ event: Event) {
         let logger = AppLogger(subsystem: subsystem, category: "presentation")
-        if case .launchFailed = event {
+        switch event {
+        case .launchFailed, .cleanupStalled:
             logger.log(level: .error, event.message)
-        } else {
+        default:
             logger.log(level: .debug, event.message)
         }
     }

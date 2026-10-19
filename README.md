@@ -72,3 +72,5 @@ API documentation is published with DocC after a GitHub release. See the [Intell
 - Xcode 27
 - Apple platform versions shown in the badge above
 - Swift Package Manager
+
+Cleanup reconciles public UIKit state for up to two seconds after closing begins, retaining its owner independently of the SwiftUI host. A late association is dismissed, and observed detachment can finish cleanup even if UIKit omits a completion callback. UIKit has no definitive rejection callback: a never-associated editor is considered closed after this reconciliation window, but an editor that remains attached is never falsely reported dismissed. Permanently stuck system presentation machinery cannot guarantee bounded recovery; the bridge does not dismiss an unrelated containing sheet.

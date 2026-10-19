@@ -36,6 +36,7 @@ func resultsPreserveTemporaryURL() {
 func loggingMessagesArePrivacySafe() {
     #expect(IntelligenceBridgeLogging.Event.cancelled.message == "🧠 playground | result=cancelled")
     #expect(IntelligenceBridgeLogging.Event.completed.message == "🧠 playground | result=completed")
+    #expect(IntelligenceBridgeLogging.Event.cleanupStalled.message == "🧠 playground | result=cleanup-stalled")
     #expect(IntelligenceBridgeLogging.Event.opening.message == "🧠 playground | result=opening")
     #expect(IntelligenceBridgeLogging.Event.opened.message == "🧠 playground | result=opened")
     #expect(IntelligenceBridgeLogging.Event.dismissed.message == "🧠 playground | result=dismissed")
