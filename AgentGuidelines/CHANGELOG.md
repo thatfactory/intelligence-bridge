@@ -2,6 +2,34 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.0.38] - 2026-10-15
+
+### Added
+
+- Made size-based scroll bounce the SwiftUI `ScrollView` default on supported deployment targets, with axis and environment-scope guidance for nested scrolling and modal sheets.
+- Added a completion-audit check for new or changed `ScrollView` bounce behavior and documented exceptions.
+
+## [0.0.37] - 2026-10-14
+
+### Added
+
+- Made native SwiftUI and platform components the default for supported interactions, with approved durable exceptions required for verified native capability gaps.
+- Defined presentation hierarchy, independent child dismissal, parent draft retention, cancellation, dismissal-completion cleanup, and required runtime interaction evidence.
+- Added a mandatory completion-audit decision check for custom component and presentation lifecycle replacements, with validator and regression coverage.
+
+## [0.0.36] - 2026-10-09
+
+### Added
+
+- Added SwiftUI animation guidance favoring purposeful native feedback, default SwiftUI animation, system transitions, and SF Symbol effects while keeping animations scoped and interactions responsive.
+- Required an explicit task-prompt request before adding app-level Reduce Motion guards, while preserving accessibility behavior supplied automatically by native system components.
+
+## [0.0.35] - 2026-09-27
+
+### Changed
+
+- Require positive repository-specific evidence before automatic Codex review becomes a merge gate. Track configuration separately from current-head execution, default undiscoverable settings to `unknown`, and bound deduplicated start-signal monitoring to five minutes.
+
 ## [0.0.34] - 2026-09-20
 
 ### Changed
