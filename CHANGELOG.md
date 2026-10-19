@@ -4,14 +4,24 @@ All notable changes to IntelligenceBridge are documented here.
 
 ## Unreleased
 
+## 0.3.0 — 2026-10-19
+
+### Added
+
+- Add an iOS native presentation adapter with confirmed opening, completed dismissal, and typed unavailable or opening-timeout outcomes. Its configurable 12-second opening deadline never limits active editing or generation.
+- Serialize terminal callbacks and cleanup, reject stale callbacks, and preserve synchronous temporary-image consumption before dismissal.
+- Add deterministic lifecycle tests and privacy-safe presentation diagnostics.
+
+### Changed
+
+- Adopt AgentGuidelines `0.0.38`. The existing cross-platform SwiftUI sheet API remains source compatible.
+
 ## 0.2.0 — 2026-09-20
 
 ### Added
 
-- Add a Foundation Models availability value that maps Apple's on-device model state to stable reasons and reports
-  unsupported platforms explicitly.
-- Re-export Apple's Foundation Models APIs on supported platforms so consumers can use `SystemLanguageModel`,
-  `LanguageModelSession`, `@Generable`, and `@Guide` directly.
+- Add a Foundation Models availability value that maps Apple's on-device model state to stable reasons and reports unsupported platforms explicitly.
+- Re-export Apple's Foundation Models APIs on supported platforms so consumers can use `SystemLanguageModel`, `LanguageModelSession`, `@Generable`, and `@Guide` directly.
 
 ### Changed
 

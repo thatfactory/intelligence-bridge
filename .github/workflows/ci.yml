@@ -46,3 +46,13 @@ jobs:
 
       - name: Run Tests
         run: swift test -v
+
+  ios-build:
+    name: iOS Build
+    runs-on: [self-hosted, macOS]
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+
+      - name: Build Native Presentation Adapter
+        run: xcodebuild -scheme IntelligenceBridge -destination 'generic/platform=iOS Simulator' build CODE_SIGNING_ALLOWED=NO

@@ -15,6 +15,7 @@ let swiftFormatConfiguration = root.appendingPathComponent("Configurations/Swift
 let editorConfiguration = root.appendingPathComponent("Configurations/Swift/.editorconfig")
 let swiftFormatScript = root.appendingPathComponent("Scripts/swift_format.sh")
 let swiftFormatGuideline = root.appendingPathComponent("Guidelines/Swift/SwiftFormat.md")
+let swiftUIGuideline = root.appendingPathComponent("Guidelines/Swift/SwiftUI.md")
 let localizationGuideline = root.appendingPathComponent("Guidelines/Localization.md")
 let appStoreGuideline = root.appendingPathComponent("Guidelines/AppStore.md")
 let xcodeProjectSettingsGuideline = root.appendingPathComponent("Guidelines/Xcode/ProjectSettings.md")
@@ -34,6 +35,7 @@ let cicdGuideline = root.appendingPathComponent("Guidelines/CICD.md")
 let documentationGuideline = root.appendingPathComponent("Guidelines/Documentation.md")
 let packagesGuideline = root.appendingPathComponent("Guidelines/Packages.md")
 let agentsTemplate = root.appendingPathComponent("Templates/AGENTS.md")
+let pullRequestsGuideline = root.appendingPathComponent("Guidelines/GitHub/PullRequests.md")
 let gitignoreTemplate = root.appendingPathComponent("Templates/.gitignore")
 let gitignoreGuideline = root.appendingPathComponent("Guidelines/Git/IgnoreFiles.md")
 
@@ -672,6 +674,46 @@ func validateExternalDependencyPolicy(_ errors: inout [String]) {
     }
 }
 
+/// Protects the native-component decision, ownership, and runtime-evidence policy.
+func validateNativeComponentPolicy(_ errors: inout [String]) {
+    guard let contents = readText(swiftUIGuideline, errors: &errors) else { return }
+    let required = [
+        "## Native components and presentation",
+        "Prefer native SwiftUI or platform controls and presentation APIs",
+        "sheets, alerts, confirmation dialogs, navigation, menus, pickers, popovers",
+        "Custom fonts, button styles, and content inside a native sheet are compatible",
+        "Do not substitute a sheet-shaped `ZStack`, offset animation, or custom scrim",
+        "Pixel fidelity to a static design and preserving mounted state are insufficient",
+        "actual native capability gap verified against the supported platform and deployment target",
+        "Before implementation, obtain explicit repository-owner approval and record a durable exception",
+        "Do not invent a capability gap or infer approval from existing custom code",
+        "An unapproved or undocumented replacement blocks completion",
+        "attach that presentation to the active child hierarchy",
+        "Give each child independent dismissal",
+        "Keep parent-owned draft state alive",
+        "Make cancellation idempotent",
+        "reject stale completions after dismissal or replacement",
+        "presentation's dismissal-completion callback",
+        "## Required interaction evidence",
+        "presentation and dismissal animation/dimming",
+        "interactive dismissal and gesture routing",
+        "parent survival with draft retention",
+        "safe areas, controls and shadow clipping, keyboard/focus restoration",
+        "Dynamic Type and localization",
+        "Exercise asynchronous cancellation and stale completion",
+        "A static screenshot or a no-op automation call is not evidence that gestures work",
+        "Require an actual gesture and its observed result, or recorded manual verification",
+        "Missing relevant runtime evidence blocks completion",
+        "Simulated sheet with a suitable native API and no approved durable exception | Blocked",
+        "Native nested sheet with branded content, correct ownership, and required interaction evidence | Accepted",
+        "Custom equivalent for a verified capability gap with owner approval, durable exception, and compensating evidence | Accepted within the approved scope",
+        "Presentation with missing relevant runtime evidence | Blocked",
+    ]
+    for value in required where !contents.contains(value) {
+        errors.append("Guidelines/Swift/SwiftUI.md: missing native-component policy: '\(value)'")
+    }
+}
+
 /// Validates the completion-audit skill and native helper scripts.
 func validateAuditSkill(_ errors: inout [String]) {
     guard let contents = readText(auditSkill, errors: &errors) else {
@@ -682,6 +724,19 @@ func validateAuditSkill(_ errors: inout [String]) {
         "before claiming completion": "completion trigger",
         "git diff --check": "diff validation",
         "validate_consumer_setup.swift": "consumer integration validation",
+        "Perform the mandatory [native-component and presentation decision check]": "mandatory native-component audit",
+        "## Audit native components and presentation": "native-component audit section",
+        "Guidelines/Swift/SwiftUI.md#native-components-and-presentation": "authoritative native-component policy link",
+        "custom modal hosts, overlay/scrim/offset code, and gesture routing": "custom presentation inspection",
+        "native alternative, deployment-target availability": "native alternative decision evidence",
+        "explicit repository-owner approval, durable consumer exception": "custom component exception validation",
+        "required approved and documented exception blocks audit completion": "native-component audit stopping rule",
+        "child dismissal, parent draft ownership, nested picker/editor presenters": "presentation hierarchy audit",
+        "cancellation, and dismissal-completion cleanup": "presentation cancellation audit",
+        "native nested sheet with branded content is accepted": "native branded content acceptance",
+        "Guidelines/Swift/SwiftUI.md#required-interaction-evidence": "presentation runtime evidence link",
+        "static screenshots and no-op automation do not establish gesture behavior": "gesture evidence audit",
+        "Missing relevant runtime evidence blocks audit completion": "runtime evidence stopping rule",
         "format-and-lint": "local Swift-format audit",
         "lint-strict": "strict Swift-format CI audit",
         "AppLogger": "AppLogger integration audit",
@@ -772,6 +827,52 @@ func validateAuditSkill(_ errors: inout [String]) {
     }
 }
 
+/// Validates positive evidence and bounded monitoring for automatic Codex reviews.
+func validateCodexReviewEvidence(_ errors: inout [String]) {
+    guard let guide = readText(pullRequestsGuideline, errors: &errors) else { return }
+    let required = [
+        "codex_review_configuration = enabled | disabled | unknown",
+        "codex_review_execution = not_started | scheduled | processing | completed",
+        "codex_review_expected_sha = <current PR head SHA>",
+        "Only positive repository-specific evidence",
+        "unknown` plus no signal remains `not_started`",
+        "Discovering `enabled` alone does not schedule a review",
+        "reviewed SHA equals the expected SHA",
+        "at most five minutes total from entry into `scheduled`, including time spent in `processing`",
+        "A processing signal changes the execution state but does not reset the deadline or poll budget",
+        "An identical fingerprint causes no substantive re-analysis or user notification",
+        "Without configuration evidence, do not create a monitor",
+        "do not transfer `scheduled`, `processing`, or `completed`",
+        "At the deadline, stop and terminate the monitor, report the observed facts once, and never infer approval",
+        "If the head changes during monitoring, terminate the old monitor",
+    ]
+    for concept in required where !guide.contains(concept) {
+        errors.append("Guidelines/GitHub/PullRequests.md: missing Codex review evidence rule: \(concept)")
+    }
+    for forbidden in ["No review yet means pending", "Wait for the configured Codex review to finish"]
+    where guide.contains(forbidden) {
+        errors.append("Guidelines/GitHub/PullRequests.md: unconditional Codex review gate: \(forbidden)")
+    }
+    let scenarioOutcomes = [
+        "Enabled with a current-head processing signal | `processing` | Pending | No; processing already began",
+        "Enabled with a completed review covering the expected head and dispositioned findings | `completed` | Satisfied | No",
+        "Unknown with no signal or configuration evidence | `not_started` | Not blocked by absent Codex review | No",
+        "Disabled with no review | `not_started` | Not blocked by absent Codex review | No",
+        "Review completed for an old head | Re-establish for new head | Old review does not satisfy the gate | No inherited monitor",
+        "Enabled and positively eligible, with no start signal | `scheduled` | Pending while required | Yes, at most five minutes",
+        "A signal inside the budget advances to `processing` while preserving configuration evidence and expected SHA",
+        "If no signal appears by the deadline, terminate monitoring and report the unresolved verified state once; timeout never satisfies the gate",
+    ]
+    for outcome in scenarioOutcomes where !guide.contains(outcome) {
+        errors.append("Guidelines/GitHub/PullRequests.md: missing Codex review scenario outcome: \(outcome)")
+    }
+    if let template = readText(agentsTemplate, errors: &errors),
+        !template.contains("this template does not establish that automatic review is configured")
+    {
+        errors.append("Templates/AGENTS.md: missing unknown-configuration safeguard")
+    }
+}
+
 /// Validates the reusable ignore template and its shared reconciliation policy.
 func validateGitignoreGuidance(_ errors: inout [String]) {
     guard let template = readText(gitignoreTemplate, errors: &errors) else { return }
@@ -822,6 +923,8 @@ func main() -> Int32 {
     validateXcodeProjectSettingsGuideline(&errors)
     validatePackageCompilerSettingsGuideline(&errors)
     validateExternalDependencyPolicy(&errors)
+    validateNativeComponentPolicy(&errors)
+    validateCodexReviewEvidence(&errors)
     validateGitignoreGuidance(&errors)
     validateExecutable(consumerSetupScript, description: "consumer setup validator", errors: &errors)
     validateAuditSkill(&errors)
