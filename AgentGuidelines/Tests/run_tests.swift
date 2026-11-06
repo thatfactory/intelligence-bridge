@@ -121,6 +121,192 @@ func localization(_ value: String, state: String = "translated") -> String {
 
 let tests: [(String, () throws -> Void)] = [
     (
+        "networking validator rejects missing policy and audit gates",
+        {
+            let mutations: [(String, String)] = [
+                ("Guidelines/Networking.md", "`HTTPTypes` and `HTTPTypesFoundation`"),
+                ("Guidelines/Networking.md", "## Capability-gap exceptions"),
+                ("Guidelines/Development.md", "Networking.md#standing-dependency-approval"),
+                (
+                    ".agents/skills/agent-guidelines-audit/SKILL.md",
+                    "Dependency presence or imports alone do not establish compliance"
+                ),
+                (
+                    ".agents/skills/agent-guidelines-audit/SKILL.md",
+                    "report it as deferred compliance, never full networking compliance"
+                ),
+            ]
+            try withTemporaryDirectory { temporary in
+                let fixture = temporary.appendingPathComponent("repository")
+                try copyRepositoryFixture(to: fixture)
+                let validator = fixture.appendingPathComponent("Scripts/validate_guidelines.swift").path
+                let baseline = try run([validator])
+                try require(baseline.succeeded, baseline.output)
+                for (path, fragment) in mutations {
+                    let file = fixture.appendingPathComponent(path)
+                    let original = try String(contentsOf: file, encoding: .utf8)
+                    try require(original.contains(fragment), "missing test fixture text: \(fragment)")
+                    try write(original.replacingOccurrences(of: fragment, with: "REMOVED"), to: file)
+                    let result = try run([validator])
+                    try require(!result.succeeded, "networking drift unexpectedly passed: \(fragment)")
+                    try require(result.output.contains("missing networking requirement"), result.output)
+                    try write(original, to: file)
+                }
+            }
+        }
+    ),
+    (
+        "consumer validator requires dependency contract v2 and its standing approval",
+        {
+            try withTemporaryDirectory { root in
+                try createConsumerFixture(at: root, isPackage: true)
+                let agents = root.appendingPathComponent("AGENTS.md")
+                let original = try String(contentsOf: agents, encoding: .utf8)
+                let command = [script("Scripts/validate_consumer_setup.swift"), "--consumer-root", root.path]
+                let baseline = try run(command)
+                try require(baseline.succeeded, baseline.output)
+                try write(
+                    original.replacingOccurrences(
+                        of: "EXTERNAL DEPENDENCY CONTRACT v2", with: "EXTERNAL DEPENDENCY CONTRACT v1"),
+                    to: agents)
+                let stale = try run(command)
+                try require(!stale.succeeded, "stale dependency contract unexpectedly passed")
+                try require(stale.output.contains("EXTERNAL DEPENDENCY CONTRACT v2"), stale.output)
+                try write(original.replacingOccurrences(of: "narrow standing approval", with: "approval"), to: agents)
+                let drift = try run(command)
+                try require(!drift.succeeded, "changed standing approval unexpectedly passed")
+                try require(drift.output.contains("external-dependency contract does not match"), drift.output)
+            }
+        }
+    ),
+    (
+        "interaction/rendering validator rejects guide and audit drift",
+        {
+            let mutations: [(String, [String])] = [
+                (
+                    "Guidelines/Swift/SwiftUI.md",
+                    [
+                        "## Animation",
+                        "both directions, without screen-level opt-in",
+                        "Preserve system-owned feedback instead of layering duplicate animation",
+                        "never delay functional state until an animation finishes",
+                        "Preserve stable view identity when only appearance changes",
+                        "value-triggered animation can affect other changes in the same transaction",
+                        "Use narrower modifier or closure scope",
+                        "[Reduce Motion policy](#reduce-motion)",
+                        "### Reduce Motion",
+                        "https://developer.apple.com/help/app-store-connect/manage-app-accessibility/reduced-motion-evaluation-criteria/",
+                        "no separate task request is required",
+                        "do not disable all animation indiscriminately",
+                        "Follow preference changes during use",
+                        "document any equivalent or more granular in-app alternative",
+                        "Remove decorative triggers or replace them with lower-motion feedback",
+                        "stop it or provide a discoverable stop control",
+                        "replace meaningful motion with suitable alternatives",
+                        "Claim Reduced Motion support only after evaluating all common tasks for the platform being declared",
+                        "required third-party or user-generated content, and advertising",
+                        "An app with no problematic motion can qualify",
+                        "Re-evaluate support with each app update",
+                        "withhold or correct a claim",
+                        "## Image rendering",
+                        "retained, display-appropriate derivatives",
+                        "display scale, aspect-fit/fill requirements, orientation, fidelity, and bounded intermediate/cache memory",
+                        "Refresh derivatives when their source or relevant presentation requirements change",
+                        "outside view construction and repeated interaction paths",
+                        "off the main actor when supported and concurrency-safe",
+                        "Reject stale asynchronous results after replacement, cancellation, or removal",
+                        "separate from authoritative originals needed for editing, saving, or export",
+                        "Inspect the representation actually drawn",
+                        "do not impose blanket bans",
+                    ]
+                ),
+                (
+                    ".agents/skills/agent-guidelines-audit/SKILL.md",
+                    [
+                        "Perform the mandatory [animation and image-rendering check](#audit-animation-and-image-rendering)",
+                        "## Audit animation and image rendering",
+                        "Guidelines/Swift/SwiftUI.md#animation",
+                        "Guidelines/Swift/SwiftUI.md#image-rendering",
+                        "do not expand the audit into unrelated screens",
+                        "its owner, and its intended animation or justified immediate feedback",
+                        "Verify reusable defaults without caller-added animation",
+                        "enabled to disabled and disabled to enabled, ordinary presses, rapid reversals",
+                        "hit-testing, accessibility state, and action availability change immediately",
+                        "repeated preparation, oversized drawable content, unstable identity, unbounded caches, and stale publication",
+                        "Exercise representative large-image content",
+                        "compare with an image-free scenario",
+                        "Require recorded runtime actions and outcomes for meaningful motion changes",
+                        "Compilation, static screenshots, and idle captures do not prove smooth interaction",
+                        "Documentation-only policy changes require scenario walkthroughs",
+                        "use Apple performance tools where available and authorized",
+                        "Record the active interaction window",
+                        "Distinguish recorded manual verification from instrumented measurements",
+                        "Do not require profiling every cosmetic change or impose a universal frame-rate threshold",
+                        "missing applicable interaction evidence prevent audit completion",
+                        "| Appropriate native control already supplies feedback | Accepted without additional animation |",
+                        "| Zero hitches recorded without actual interaction | Insufficient performance evidence",
+                        "[Reduce Motion check](#audit-reduce-motion)",
+                        "## Audit Reduce Motion",
+                        "Guidelines/Swift/SwiftUI.md#reduce-motion",
+                        "Guidelines/Swift/SwiftUI.md#declaring-support",
+                        "Require runtime actions and outcomes with Reduce Motion on and off",
+                        "plus a preference change while running",
+                        "missing applicable evidence blocks completion of the affected work",
+                        "expand the evidence scope to all common tasks on the declared platform",
+                        "withhold or correct unsupported claims",
+                        "do not demand an unrelated whole-app audit for an isolated motion change",
+                        "Documentation-only policy work uses scenario walkthroughs",
+                    ]
+                ),
+                (
+                    "Guidelines/AppStore.md",
+                    [
+                        "## Accessibility support claims",
+                        "Swift/SwiftUI.md#declaring-support",
+                        "adopting these guidelines alone does not establish support",
+                    ]
+                ),
+            ]
+            try withTemporaryDirectory { temporary in
+                let fixture = temporary.appendingPathComponent("repository")
+                try copyRepositoryFixture(to: fixture)
+                let validator = fixture.appendingPathComponent("Scripts/validate_guidelines.swift").path
+                let baseline = try run([validator])
+                try require(baseline.succeeded, "unmodified interaction policy failed: \(baseline.output)")
+                for (path, fragments) in mutations {
+                    let file = fixture.appendingPathComponent(path)
+                    let contents = try String(contentsOf: file, encoding: .utf8)
+                    for original in fragments {
+                        try require(contents.contains(original), "missing test fixture text: \(original)")
+                        try write(contents.replacingOccurrences(of: original, with: "REMOVED"), to: file)
+                        let result = try run([validator])
+                        try require(!result.succeeded, "interaction policy mutation unexpectedly passed: \(original)")
+                        try require(result.output.contains("missing interaction/rendering requirement"), result.output)
+                        try write(contents, to: file)
+                    }
+                }
+            }
+        }
+    ),
+    (
+        "interaction validator rejects restored Reduce Motion opt-in restriction",
+        {
+            try withTemporaryDirectory { temporary in
+                let fixture = temporary.appendingPathComponent("repository")
+                try copyRepositoryFixture(to: fixture)
+                let guide = fixture.appendingPathComponent("Guidelines/Swift/SwiftUI.md")
+                let contents = try String(contentsOf: guide, encoding: .utf8)
+                try write(
+                    contents
+                        + "\nDo not introduce app-level Reduce Motion guards unless the task prompt explicitly requests them.\n",
+                    to: guide)
+                let result = try run([fixture.appendingPathComponent("Scripts/validate_guidelines.swift").path])
+                try require(!result.succeeded, "obsolete Reduce Motion restriction unexpectedly passed")
+                try require(result.output.contains("obsolete Reduce Motion opt-in restriction"), result.output)
+            }
+        }
+    ),
+    (
         "native-component validator rejects policy and decision drift",
         {
             let mutations = [
